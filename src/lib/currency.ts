@@ -1,3 +1,5 @@
+export const MAX_PAYMENT_AMOUNT = 10_000_000;
+
 const rupiahFormatter = new Intl.NumberFormat("id-ID", {
   style: "currency",
   currency: "IDR",

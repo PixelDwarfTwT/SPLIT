@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateBill } from "@/lib/calculations/bill";
 import { parseRupiahInput } from "@/lib/currency";
+import { billDraftSchema } from "@/lib/validations/bill";
 
 const participants = [
   { id: "ayu", name: "Ayu" },
@@ -94,5 +95,26 @@ describe("calculateBill", () => {
     expect(parseRupiahInput("35.5")).toBeNull();
     expect(parseRupiahInput("-35000")).toBeNull();
     expect(parseRupiahInput("Rp35.000")).toBe(35_000);
+  });
+
+  it("accepts payment drafts up to Rp10.000.000 and rejects larger amounts", () => {
+    const participantId = "42a1df34-8e72-4c54-9349-6d85fef87112";
+    const draft = {
+      id: "98e1f3c2-9c39-4e93-8c62-3cb93b833a72",
+      participants: [{ id: participantId, name: "Ayu" }],
+      menus: [{
+        id: "e8c8c9c0-a8f2-43e4-97e8-f11c4c7338c2",
+        name: "Nasi goreng",
+        unitPrice: 35_000,
+        orders: [{ participantId, quantity: 1 }],
+      }],
+      payments: { [participantId]: 10_000_000 },
+    };
+
+    expect(billDraftSchema.safeParse(draft).success).toBe(true);
+    expect(billDraftSchema.safeParse({
+      ...draft,
+      payments: { [participantId]: 10_000_001 },
+    }).success).toBe(false);
   });
 });

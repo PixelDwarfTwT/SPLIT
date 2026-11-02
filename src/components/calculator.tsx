@@ -13,7 +13,7 @@ import {
 import { signOut } from "@/actions/auth";
 import { completeBillSession, saveBillDraft } from "@/actions/bill-session";
 import { calculateBill, type MenuItem, type Participant } from "@/lib/calculations/bill";
-import { formatRupiah, parseRupiahInput } from "@/lib/currency";
+import { formatRupiah, MAX_PAYMENT_AMOUNT, parseRupiahInput } from "@/lib/currency";
 import { menuFormSchema } from "@/lib/validations/bill";
 
 type Draft = {
@@ -25,6 +25,15 @@ type Draft = {
 };
 
 const steps = ["Peserta", "Pesanan", "Ringkasan & Pembayaran"];
+function parsePaymentInput(value: string): number | null {
+  const amount = parseRupiahInput(value);
+  if (amount !== null) return amount;
+
+  // A newly typed digit can land after a thousands separator in an already-formatted field.
+  const appendedDigit = /^(\d{1,3}(?:\.\d{3})+)(\d)$/.exec(value);
+  if (!appendedDigit) return null;
+  return parseRupiahInput(`${appendedDigit[1].replace(/\./g, "")}${appendedDigit[2]}`);
+}
 
 export function Calculator({ initialDraft }: { initialDraft: Draft }) {
   const [draft, setDraft] = useState<Draft>(initialDraft);
@@ -150,10 +159,9 @@ export function Calculator({ initialDraft }: { initialDraft: Draft }) {
   }
 
   function updatePayment(participantId: string, value: string) {
-    if (!/^\d*$/.test(value)) return;
-    const amount = value === "" ? 0 : parseRupiahInput(value);
-    if (amount === null) return;
-    setPaymentInput(value);
+    const amount = value === "" ? 0 : parsePaymentInput(value);
+    if (amount === null || amount > MAX_PAYMENT_AMOUNT) return;
+    setPaymentInput(value === "" ? "" : String(amount));
     setDraft((current) => ({ ...current, payments: { ...current.payments, [participantId]: amount } }));
   }
 
@@ -254,7 +262,7 @@ export function Calculator({ initialDraft }: { initialDraft: Draft }) {
           {step === 2 && <>
             <section className="panel summary-hero"><div><p className="eyebrow">Total tagihan</p><h2>{formatRupiah(summary.groupTotal)}</h2><p>{summary.menuCount} menu <i /> {summary.totalPortions} porsi <i /> {summary.peopleWithOrders} orang</p></div><div className="receipt-stamp"><ReceiptText size={27} /></div></section>
             <section className="panel"><div className="list-heading"><div><h2>Pembayaran per orang</h2><p>Setiap pembayaran dihitung untuk tagihan orang itu sendiri.</p></div><Coins size={21} className="heading-icon" /></div>
-              {summary.participants.filter(({ bill }) => bill > 0).map((person) => <article className="payment-card" key={person.id}><div className="payment-title"><div><h3>{person.name}</h3><span>Tagihan {formatRupiah(person.bill)}</span></div><label className="payment-field"><span className="field-label">Uang dibayar</span><span className="payment-input"><span>Rp</span><input aria-label={`Uang dibayar ${person.name}`} inputMode="numeric" value={editingPaymentId === person.id ? paymentInput : draft.payments[person.id] ? new Intl.NumberFormat("id-ID").format(draft.payments[person.id]) : ""} onFocus={() => beginPaymentEdit(person.id)} onChange={(event) => updatePayment(person.id, event.target.value)} onBlur={() => setEditingPaymentId((current) => current === person.id ? null : current)} placeholder="0" /></span></label></div>
+              {summary.participants.filter(({ bill }) => bill > 0).map((person) => <article className="payment-card" key={person.id}><div className="payment-title"><div><h3>{person.name}</h3><span>Tagihan {formatRupiah(person.bill)}</span></div><label className="payment-field"><span className="field-label">Uang dibayar</span><span className="payment-input"><span>Rp</span><input aria-label={`Uang dibayar ${person.name}`} inputMode="numeric" maxLength={8} value={editingPaymentId === person.id ? paymentInput : draft.payments[person.id] ? new Intl.NumberFormat("id-ID").format(draft.payments[person.id]) : ""} onFocus={() => beginPaymentEdit(person.id)} onChange={(event) => updatePayment(person.id, event.target.value)} onBlur={() => setEditingPaymentId((current) => current === person.id ? null : current)} placeholder="0" /></span></label></div>
                 <div className={`payment-result ${person.change ? "success" : person.shortfall ? "warning" : "even"}`}>{person.change > 0 ? <><ArrowDownLeft size={17} /><span>Kembalian {person.name}</span><strong>{formatRupiah(person.change)}</strong></> : person.shortfall > 0 ? <><Coins size={17} /><span>Kurang bayar {person.name}</span><strong>{formatRupiah(person.shortfall)}</strong></> : <><CheckCircle2 size={17} /><span>Pembayaran pas</span><strong>{formatRupiah(0)}</strong></>}</div>
                 <details className="bill-details"><summary>Rincian tagihan {person.name}<span>{formatRupiah(person.bill)}</span></summary><div>{person.items.map((item) => <p key={item.menuId}><span>{item.menuName} × {item.quantity}</span><strong>{formatRupiah(item.amount)}</strong></p>)}</div></details>
               </article>)}

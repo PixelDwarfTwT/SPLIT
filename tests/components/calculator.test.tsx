@@ -32,6 +32,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function renderSingleParticipantPayment() {
+  const draftWithOrder = {
+    ...initialDraft,
+    participants: [{ id: "ayu", name: "Ayu" }],
+    menus: [{
+      id: "nasi",
+      name: "Nasi goreng",
+      unitPrice: 35_000,
+      orders: [{ participantId: "ayu", quantity: 1 }],
+    }],
+  };
+  render(<Calculator initialDraft={draftWithOrder} />);
+  fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+  fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+  return screen.getByRole("textbox", { name: "Uang dibayar Ayu" }) as HTMLInputElement;
+}
+
 describe("Patungan calculator flow", () => {
   it("creates a menu order, calculates separate payments, and completes the bill", async () => {
     render(<Calculator initialDraft={initialDraft} />);
@@ -66,21 +83,7 @@ describe("Patungan calculator flow", () => {
   });
 
   it("accepts and lets you replace payment amounts longer than four digits", () => {
-    const draftWithOrder = {
-      ...initialDraft,
-      participants: [{ id: "ayu", name: "Ayu" }],
-      menus: [{
-        id: "nasi",
-        name: "Nasi goreng",
-        unitPrice: 35_000,
-        orders: [{ participantId: "ayu", quantity: 1 }],
-      }],
-    };
-    render(<Calculator initialDraft={draftWithOrder} />);
-    fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
-    fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
-
-    const payment = screen.getByRole("textbox", { name: "Uang dibayar Ayu" }) as HTMLInputElement;
+    const payment = renderSingleParticipantPayment();
     fireEvent.focus(payment);
     for (const digit of "50000") {
       fireEvent.change(payment, { target: { value: `${payment.value}${digit}` } });
@@ -96,5 +99,27 @@ describe("Patungan calculator flow", () => {
     }
     expect(payment.value).toBe("35000");
     expect(screen.getByText("Pembayaran pas")).toBeTruthy();
+  });
+
+  it("accepts a digit after a displayed thousands separator", () => {
+    const payment = renderSingleParticipantPayment();
+    fireEvent.focus(payment);
+    fireEvent.change(payment, { target: { value: "5.000" } });
+    fireEvent.change(payment, { target: { value: "5.0000" } });
+
+    expect(payment.value).toBe("50000");
+    expect(screen.getByText("Kembalian Ayu")).toBeTruthy();
+  });
+
+  it("allows payments up to Rp10.000.000 and rejects larger values", () => {
+    const payment = renderSingleParticipantPayment();
+    fireEvent.focus(payment);
+    for (const digit of "10000000") {
+      fireEvent.change(payment, { target: { value: `${payment.value}${digit}` } });
+    }
+
+    expect(payment.value).toBe("10000000");
+    fireEvent.change(payment, { target: { value: "10000001" } });
+    expect(payment.value).toBe("10000000");
   });
 });

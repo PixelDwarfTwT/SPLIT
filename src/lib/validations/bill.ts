@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { MAX_PAYMENT_AMOUNT } from "@/lib/currency";
 
 const uuid = z.string().uuid();
 const rupiah = z.number().int().nonnegative().safe();
+const paymentAmount = rupiah.max(MAX_PAYMENT_AMOUNT);
 const participantSchema = z.object({ id: uuid, name: z.string().trim().min(1).max(80) });
 const menuSchema = z.object({
   id: uuid,
@@ -14,7 +16,7 @@ export const billDraftSchema = z.object({
   id: uuid,
   participants: z.array(participantSchema).max(20),
   menus: z.array(menuSchema).max(200),
-  payments: z.record(uuid, rupiah),
+  payments: z.record(uuid, paymentAmount),
 }).superRefine((draft, ctx) => {
   const normalizedNames = new Set<string>();
   for (const participant of draft.participants) {
