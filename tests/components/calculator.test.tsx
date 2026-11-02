@@ -64,4 +64,37 @@ describe("Patungan calculator flow", () => {
     await waitFor(() => expect(saveBillDraft).toHaveBeenCalled());
     expect(completeBillSession).toHaveBeenCalledWith(initialDraft.id);
   });
+
+  it("accepts and lets you replace payment amounts longer than four digits", () => {
+    const draftWithOrder = {
+      ...initialDraft,
+      participants: [{ id: "ayu", name: "Ayu" }],
+      menus: [{
+        id: "nasi",
+        name: "Nasi goreng",
+        unitPrice: 35_000,
+        orders: [{ participantId: "ayu", quantity: 1 }],
+      }],
+    };
+    render(<Calculator initialDraft={draftWithOrder} />);
+    fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    const payment = screen.getByRole("textbox", { name: "Uang dibayar Ayu" }) as HTMLInputElement;
+    fireEvent.focus(payment);
+    for (const digit of "50000") {
+      fireEvent.change(payment, { target: { value: `${payment.value}${digit}` } });
+    }
+    expect(payment.value).toBe("50000");
+    expect(screen.getByText("Kembalian Ayu")).toBeTruthy();
+
+    fireEvent.change(payment, { target: { value: "" } });
+    fireEvent.blur(payment);
+    fireEvent.focus(payment);
+    for (const digit of "35000") {
+      fireEvent.change(payment, { target: { value: `${payment.value}${digit}` } });
+    }
+    expect(payment.value).toBe("35000");
+    expect(screen.getByText("Pembayaran pas")).toBeTruthy();
+  });
 });

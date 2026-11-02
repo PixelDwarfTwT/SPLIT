@@ -40,6 +40,8 @@ export function Calculator({ initialDraft }: { initialDraft: Draft }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [editingMenu, setEditingMenu] = useState<string | null>(null);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [paymentInput, setPaymentInput] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [saving, startSaving] = useTransition();
@@ -148,9 +150,17 @@ export function Calculator({ initialDraft }: { initialDraft: Draft }) {
   }
 
   function updatePayment(participantId: string, value: string) {
+    if (!/^\d*$/.test(value)) return;
     const amount = value === "" ? 0 : parseRupiahInput(value);
     if (amount === null) return;
+    setPaymentInput(value);
     setDraft((current) => ({ ...current, payments: { ...current.payments, [participantId]: amount } }));
+  }
+
+  function beginPaymentEdit(participantId: string) {
+    const amount = draft.payments[participantId] ?? 0;
+    setEditingPaymentId(participantId);
+    setPaymentInput(amount > 0 ? String(amount) : "");
   }
 
   function navigate(nextStep: number) {
@@ -244,7 +254,7 @@ export function Calculator({ initialDraft }: { initialDraft: Draft }) {
           {step === 2 && <>
             <section className="panel summary-hero"><div><p className="eyebrow">Total tagihan</p><h2>{formatRupiah(summary.groupTotal)}</h2><p>{summary.menuCount} menu <i /> {summary.totalPortions} porsi <i /> {summary.peopleWithOrders} orang</p></div><div className="receipt-stamp"><ReceiptText size={27} /></div></section>
             <section className="panel"><div className="list-heading"><div><h2>Pembayaran per orang</h2><p>Setiap pembayaran dihitung untuk tagihan orang itu sendiri.</p></div><Coins size={21} className="heading-icon" /></div>
-              {summary.participants.filter(({ bill }) => bill > 0).map((person) => <article className="payment-card" key={person.id}><div className="payment-title"><div><h3>{person.name}</h3><span>Tagihan {formatRupiah(person.bill)}</span></div><label className="payment-field"><span className="field-label">Uang dibayar</span><span className="payment-input"><span>Rp</span><input aria-label={`Uang dibayar ${person.name}`} inputMode="numeric" value={draft.payments[person.id] ? new Intl.NumberFormat("id-ID").format(draft.payments[person.id]) : ""} onChange={(event) => updatePayment(person.id, event.target.value)} placeholder="0" /></span></label></div>
+              {summary.participants.filter(({ bill }) => bill > 0).map((person) => <article className="payment-card" key={person.id}><div className="payment-title"><div><h3>{person.name}</h3><span>Tagihan {formatRupiah(person.bill)}</span></div><label className="payment-field"><span className="field-label">Uang dibayar</span><span className="payment-input"><span>Rp</span><input aria-label={`Uang dibayar ${person.name}`} inputMode="numeric" value={editingPaymentId === person.id ? paymentInput : draft.payments[person.id] ? new Intl.NumberFormat("id-ID").format(draft.payments[person.id]) : ""} onFocus={() => beginPaymentEdit(person.id)} onChange={(event) => updatePayment(person.id, event.target.value)} onBlur={() => setEditingPaymentId((current) => current === person.id ? null : current)} placeholder="0" /></span></label></div>
                 <div className={`payment-result ${person.change ? "success" : person.shortfall ? "warning" : "even"}`}>{person.change > 0 ? <><ArrowDownLeft size={17} /><span>Kembalian {person.name}</span><strong>{formatRupiah(person.change)}</strong></> : person.shortfall > 0 ? <><Coins size={17} /><span>Kurang bayar {person.name}</span><strong>{formatRupiah(person.shortfall)}</strong></> : <><CheckCircle2 size={17} /><span>Pembayaran pas</span><strong>{formatRupiah(0)}</strong></>}</div>
                 <details className="bill-details"><summary>Rincian tagihan {person.name}<span>{formatRupiah(person.bill)}</span></summary><div>{person.items.map((item) => <p key={item.menuId}><span>{item.menuName} × {item.quantity}</span><strong>{formatRupiah(item.amount)}</strong></p>)}</div></details>
               </article>)}
