@@ -284,6 +284,10 @@ export function Calculator({ initialDraft }: { initialDraft: Draft }) {
   );
 }
 
+export function CalculatorSession({ initialDraft }: { initialDraft: Draft }) {
+  return <Calculator key={initialDraft.id} initialDraft={initialDraft} />;
+}
+
 function Header({ saving, onSignOut }: { saving: boolean; onSignOut: () => void }) {
   return <header className="site-header"><Link className="brand-lockup" href="/" aria-label="Patungan, halaman utama"><span className="brand-symbol"><span /><span /><span /></span><span className="brand-name">patungan<small>Lebih jelas. Lebih adil.</small></span></Link><div className="header-actions"><span className="connection-label"><span /> {saving ? "Menyimpan" : "Tersimpan"}</span><button className="signout-button" type="button" onClick={onSignOut} aria-label="Keluar"><LogOut size={18} /><span>Keluar</span></button></div></header>;
 }

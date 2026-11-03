@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Calculator } from "@/components/calculator";
+import { CalculatorSession } from "@/components/calculator";
 import { completeBillSession, saveBillDraft } from "@/actions/bill-session";
 
 vi.mock("@/actions/auth", () => ({ signOut: vi.fn() }));
@@ -48,7 +48,7 @@ function renderSingleParticipantPayment() {
       orders: [{ participantId: "ayu", quantity: 1 }],
     }],
   };
-  render(<Calculator initialDraft={draftWithOrder} />);
+  render(<CalculatorSession initialDraft={draftWithOrder} />);
   fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
   fireEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
   return screen.getByRole("textbox", { name: "Uang dibayar Ayu" }) as HTMLInputElement;
@@ -56,7 +56,7 @@ function renderSingleParticipantPayment() {
 
 describe("Patungan calculator flow", () => {
   it("creates a menu order, calculates separate payments, and completes the bill", async () => {
-    render(<Calculator initialDraft={initialDraft} />);
+    const view = render(<CalculatorSession initialDraft={initialDraft} />);
 
     fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Ayu" } });
     fireEvent.click(screen.getByRole("button", { name: "Tambah" }));
@@ -89,6 +89,9 @@ describe("Patungan calculator flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Perhitungan baru" }));
     expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
     expect(mockRouter.push).not.toHaveBeenCalled();
+
+    view.rerender(<CalculatorSession initialDraft={{ ...initialDraft, id: "f40fbc4a-4f38-4f30-bc96-ecb76ed19a17" }} />);
+    expect(screen.getByRole("heading", { name: "Mulai dari peserta" })).toBeTruthy();
   });
 
   it("accepts and lets you replace payment amounts longer than four digits", () => {
