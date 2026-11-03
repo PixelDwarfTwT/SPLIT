@@ -77,7 +77,6 @@ export async function completeBillSession(sessionId: string): Promise<ActionResu
     const supabase = await getAdminClient();
     const { error } = await supabase.rpc("complete_bill_session", { p_session_id: sessionId });
     if (error) throw error;
-    revalidatePath("/");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Perhitungan tidak dapat diselesaikan." };
