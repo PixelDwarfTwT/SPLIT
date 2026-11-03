@@ -9,7 +9,10 @@ vi.mock("@/actions/bill-session", () => ({
   saveBillDraft: vi.fn().mockResolvedValue({ ok: true }),
   completeBillSession: vi.fn().mockResolvedValue({ ok: true }),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const { mockRouter } = vi.hoisted(() => ({
+  mockRouter: { push: vi.fn(), refresh: vi.fn() },
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: React.ComponentProps<"a">) => <a href={href} {...props}>{children}</a>,
 }));
@@ -23,6 +26,8 @@ const initialDraft = {
 };
 
 beforeEach(() => {
+  mockRouter.push.mockClear();
+  mockRouter.refresh.mockClear();
   vi.spyOn(window, "confirm").mockReturnValue(true);
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
 });
@@ -80,6 +85,10 @@ describe("Patungan calculator flow", () => {
     expect(screen.getAllByText("Rp140.000").length).toBeGreaterThan(0);
     await waitFor(() => expect(saveBillDraft).toHaveBeenCalled());
     expect(completeBillSession).toHaveBeenCalledWith(initialDraft.id);
+
+    fireEvent.click(screen.getByRole("button", { name: "Perhitungan baru" }));
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+    expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
   it("accepts and lets you replace payment amounts longer than four digits", () => {

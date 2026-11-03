@@ -32,3 +32,22 @@ test("keeps the full Rp10.000.000 payment field visible on mobile and desktop", 
     expect(pageOverflows, `page has no horizontal overflow at ${width}px`).toBe(false);
   }
 });
+
+test("keeps the success toast clear of mobile navigation buttons", async ({ page }) => {
+  for (const width of [360, 430]) {
+    await page.setViewportSize({ width, height: 780 });
+    await page.setContent(`
+      <main class="app-shell">
+        <div style="height: 1100px"></div>
+        <div class="navigation-row"><button class="button button-primary">Lanjutkan</button></div>
+        <div class="toast-note" role="status">Pesanan ditambahkan.</div>
+      </main>
+    `);
+    await page.addStyleTag({ content: paymentStyles.replace(/^@import[^;]+;\s*/gm, "") });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+    const toast = await page.locator(".toast-note").boundingBox();
+    const navigation = await page.locator(".navigation-row").boundingBox();
+    expect(toast && navigation && toast.y + toast.height <= navigation.y, `toast does not cover navigation at ${width}px`).toBe(true);
+  }
+});

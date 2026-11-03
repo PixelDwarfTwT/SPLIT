@@ -200,7 +200,7 @@ export function Calculator({ initialDraft }: { initialDraft: Draft }) {
         <div className="completed-total"><span>Total tagihan</span><strong>{formatRupiah(summary.groupTotal)}</strong></div>
         <SummaryPeople summary={summary} />
         <div className="payment-totals completed-totals"><div><span>Total dibayarkan</span><strong>{formatRupiah(summary.totalPaid)}</strong></div><div><span>Total kembalian</span><strong className="positive-text">{formatRupiah(summary.totalChange)}</strong></div><div><span>Total kurang bayar</span><strong className="warning-text">{formatRupiah(summary.totalShortfall)}</strong></div></div>
-        <button className="button button-primary" type="button" onClick={() => router.push("/")}><Plus size={18} /> Perhitungan baru</button>
+        <button className="button button-primary" type="button" onClick={() => router.refresh()}><Plus size={18} /> Perhitungan baru</button>
       </section>
     </main>;
   }
